@@ -4,52 +4,44 @@ const { Server } = require("socket.io");
 
 const app = express();
 const server = http.createServer(app);
+
 const io = new Server(server, {
     cors: {
         origin: "*"
     }
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 
-// 📁 servir les fichiers overlay
+// 📁 fichiers overlay
 app.use(express.static("public"));
-
-// 🔌 connexion overlay (Electron ou navigateur)
-io.on("connection", (socket) => {
-    console.log("Overlay connecté :", socket.id);
-
-    socket.on("disconnect", () => {
-        console.log("Overlay déconnecté :", socket.id);
-    });
-});
-
-// 💬 API simple pour ton bot Discord
-// exemple: POST /send {type:"text", content:"hello"}
 app.use(express.json());
 
-app.post("/send", (req, res) => {
-    const { type, content, url, duration } = req.body;
+// 🔌 connexion overlay (Electron / navigateur)
+io.on("connection", (socket) => {
+    console.log("Overlay connecté :", socket.id);
+});
 
-    const payload = {
+// 💬 recevoir message du bot Discord
+app.post("/send", (req, res) => {
+    const { type, content, duration } = req.body;
+
+    io.emit("overlay", {
         type: type || "text",
         content: content || "",
-        url: url || "",
         duration: duration || 8000
-    };
+    });
 
-    io.emit("overlay-event", payload);
-
-    res.json({ success: true, sent: payload });
+    res.json({ success: true });
 });
 
 // 🧹 clear écran
 app.post("/clear", (req, res) => {
-    io.emit("overlay-clear");
+    io.emit("clear");
     res.json({ success: true });
 });
 
-// 🚀 start serveur
+// 🚀 start serveur (IMPORTANT RENDER)
 server.listen(PORT, () => {
     console.log("Serveur OK sur port " + PORT);
 });
